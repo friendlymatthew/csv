@@ -1,5 +1,5 @@
 pub const COMMA_CLASS: u8 = 1;
-pub const WHITESPACE_CLASS: u8 = 2;
+pub const NEW_LINE_CLASS: u8 = 2;
 
 pub const QUOTATION_CLASS: u8 = 3;
 
@@ -14,15 +14,15 @@ pub const LO_LOOKUP: [u8; 16] = [
     0,
     0,
     0,
-    WHITESPACE_CLASS,
+    NEW_LINE_CLASS,
     0,
     COMMA_CLASS,
-    WHITESPACE_CLASS,
+    NEW_LINE_CLASS,
     0,
     0,
 ];
 pub const HI_LOOKUP: [u8; 16] = [
-    WHITESPACE_CLASS,
+    NEW_LINE_CLASS,
     0,
     COMMA_CLASS | QUOTATION_CLASS,
     0,
@@ -115,13 +115,13 @@ mod tests {
                 0,
                 COMMA_CLASS,
                 0,
-                WHITESPACE_CLASS,
+                NEW_LINE_CLASS,
                 0,
                 COMMA_CLASS,
                 QUOTATION_CLASS,
                 0,
                 QUOTATION_CLASS,
-                WHITESPACE_CLASS, // we always add a \n at the end
+                NEW_LINE_CLASS, // we always add a \n at the end
                 0,
                 0,
                 0,

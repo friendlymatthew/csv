@@ -1,5 +1,5 @@
 use crate::classifier::CsvClassifier;
-use crate::classifier::{COMMA_CLASS, QUOTATION_CLASS, WHITESPACE_CLASS};
+use crate::classifier::{COMMA_CLASS, NEW_LINE_CLASS, QUOTATION_CLASS};
 use crate::grammar::Row;
 use crate::u8x16::u8x16;
 use anyhow::Result;
@@ -18,7 +18,7 @@ impl CsvReader {
         let capacity = vectors.len() / 4 + 1;
 
         let comma_broadcast = u8x16::broadcast(COMMA_CLASS);
-        let whitespace_broadcast = u8x16::broadcast(WHITESPACE_CLASS);
+        let whitespace_broadcast = u8x16::broadcast(NEW_LINE_CLASS);
         let quotation_broadcast = u8x16::broadcast(QUOTATION_CLASS);
 
         let mut comma_bitsets = Vec::with_capacity(capacity);
@@ -154,8 +154,14 @@ mod tests {
         assert_eq!(csv_reader2.whitespace_bitsets.len(), 2);
         assert_eq!(csv_reader2.comma_bitsets.len(), 2);
 
-        assert_eq!(csv_reader1.quotation_bitsets[0], csv_reader2.quotation_bitsets[0]);
-        assert_eq!(csv_reader1.whitespace_bitsets[0], csv_reader2.whitespace_bitsets[0]);
+        assert_eq!(
+            csv_reader1.quotation_bitsets[0],
+            csv_reader2.quotation_bitsets[0]
+        );
+        assert_eq!(
+            csv_reader1.whitespace_bitsets[0],
+            csv_reader2.whitespace_bitsets[0]
+        );
         assert_eq!(csv_reader1.comma_bitsets[0], csv_reader2.comma_bitsets[0]);
 
         Ok(())
