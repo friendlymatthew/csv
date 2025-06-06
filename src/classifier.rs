@@ -43,13 +43,13 @@ pub const HI_LOOKUP: [u8; 16] = [
 use crate::u8x16::u8x16;
 
 #[derive(Debug)]
-pub(crate) struct CsvClassifier<'a> {
+pub struct CsvClassifier<'a> {
     cursor: usize,
     data: &'a [u8],
 }
 
 impl<'a> CsvClassifier<'a> {
-    pub fn new(data: &'a [u8]) -> Self {
+    pub const fn new(data: &'a [u8]) -> Self {
         Self { cursor: 0, data }
     }
 

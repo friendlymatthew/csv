@@ -9,7 +9,7 @@ use std::ops::Range;
 pub struct CsvReader {
     quotation_bitsets: Vec<u64>,
     comma_bitsets: Vec<u64>,
-    whitespace_bitsets: Vec<u64>,
+    new_line_bitsets: Vec<u64>,
 }
 
 impl CsvReader {
@@ -18,22 +18,22 @@ impl CsvReader {
         let capacity = vectors.len() / 4 + 1;
 
         let comma_broadcast = u8x16::broadcast(COMMA_CLASS);
-        let whitespace_broadcast = u8x16::broadcast(NEW_LINE_CLASS);
+        let new_line_broadcast = u8x16::broadcast(NEW_LINE_CLASS);
         let quotation_broadcast = u8x16::broadcast(QUOTATION_CLASS);
 
         let mut comma_bitsets = Vec::with_capacity(capacity);
-        let mut whitespace_bitsets = Vec::with_capacity(capacity);
+        let mut new_line_bitsets = Vec::with_capacity(capacity);
         let mut quotation_bitsets = Vec::with_capacity(capacity);
 
-        vectors.chunks(4).into_iter().for_each(|chunk| {
+        vectors.chunks(4).for_each(|chunk| {
             comma_bitsets.push(build_u64(chunk, comma_broadcast));
-            whitespace_bitsets.push(build_u64(chunk, whitespace_broadcast));
+            new_line_bitsets.push(build_u64(chunk, new_line_broadcast));
             quotation_bitsets.push(build_u64(chunk, quotation_broadcast));
         });
 
         Self {
             comma_bitsets,
-            whitespace_bitsets,
+            new_line_bitsets,
             quotation_bitsets,
         }
     }
@@ -52,9 +52,9 @@ impl CsvReader {
             let outside_quotations = !mark_inside_quotations(valid_quotations);
 
             let mut valid_commas = self.comma_bitsets[i] & outside_quotations;
-            let mut valid_whitespace = self.whitespace_bitsets[i] & outside_quotations;
+            let mut valid_new_line = self.new_line_bitsets[i] & outside_quotations;
 
-            if valid_commas == 0 && valid_whitespace == 0 {
+            if valid_commas == 0 && valid_new_line == 0 {
                 continue;
             }
 
@@ -62,9 +62,9 @@ impl CsvReader {
 
             loop {
                 let first_comma = valid_commas.leading_zeros() as usize;
-                let first_whitespace = valid_whitespace.leading_zeros() as usize;
+                let first_new_line = valid_new_line.leading_zeros() as usize;
 
-                let bits_traveled = first_comma.min(first_whitespace);
+                let bits_traveled = first_comma.min(first_new_line);
 
                 if bits_traveled == 64 {
                     break;
@@ -75,14 +75,14 @@ impl CsvReader {
                     end: cursor + bitset_cursor + bits_traveled,
                 });
 
-                if first_whitespace < first_comma {
+                if first_new_line < first_comma {
                     rows.push(Row::from(current_row.clone()));
                     current_row.clear();
                 }
 
                 bitset_cursor += bits_traveled + 1;
                 valid_commas <<= bits_traveled + 1;
-                valid_whitespace <<= bits_traveled + 1;
+                valid_new_line <<= bits_traveled + 1;
             }
 
             cursor += bitset_cursor;
@@ -92,7 +92,7 @@ impl CsvReader {
     }
 }
 
-fn remove_escaped_quotations(q: u64) -> u64 {
+const fn remove_escaped_quotations(q: u64) -> u64 {
     let escaped = q & (q << 1);
     let escaped = escaped | (escaped >> 1);
 
@@ -101,9 +101,9 @@ fn remove_escaped_quotations(q: u64) -> u64 {
 
 /// `mark_inside_quotations` does a parallel xor to mark all bits inbetween a quote pair.
 /// Note because of how xor works, the closing quote will be marked as 0. This is fine since
-/// we use this to mask commas and whitespace in between quote pairs.
+/// we use this to mask commas and new_line in between quote pairs.
 #[inline]
-fn mark_inside_quotations(mut x: u64) -> u64 {
+const fn mark_inside_quotations(mut x: u64) -> u64 {
     x ^= x << 1;
     x ^= x << 2;
     x ^= x << 4;
@@ -141,7 +141,7 @@ mod tests {
         let csv_reader1 = CsvReader::new(&slice63);
 
         assert_eq!(csv_reader1.quotation_bitsets.len(), 1);
-        assert_eq!(csv_reader1.whitespace_bitsets.len(), 1);
+        assert_eq!(csv_reader1.new_line_bitsets.len(), 1);
         assert_eq!(csv_reader1.comma_bitsets.len(), 1);
 
         let mut longer_slice = vec![];
@@ -151,7 +151,7 @@ mod tests {
 
         let csv_reader2 = CsvReader::new(&longer_slice);
         assert_eq!(csv_reader2.quotation_bitsets.len(), 2);
-        assert_eq!(csv_reader2.whitespace_bitsets.len(), 2);
+        assert_eq!(csv_reader2.new_line_bitsets.len(), 2);
         assert_eq!(csv_reader2.comma_bitsets.len(), 2);
 
         assert_eq!(
@@ -159,8 +159,8 @@ mod tests {
             csv_reader2.quotation_bitsets[0]
         );
         assert_eq!(
-            csv_reader1.whitespace_bitsets[0],
-            csv_reader2.whitespace_bitsets[0]
+            csv_reader1.new_line_bitsets[0],
+            csv_reader2.new_line_bitsets[0]
         );
         assert_eq!(csv_reader1.comma_bitsets[0], csv_reader2.comma_bitsets[0]);
 
