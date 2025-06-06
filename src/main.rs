@@ -7,7 +7,7 @@ fn main() -> anyhow::Result<()> {
     let data = args.next().ok_or_else(|| anyhow!("No argument passed"))?;
 
     let mut reader = CsvReader::new(data.as_bytes());
-    let rows = reader.read()?;
+    let rows = reader.read();
 
     println!("{:?}", rows);
 
